@@ -1,0 +1,224 @@
+{
+  "repository": "Rpuplesun/digimon_game",
+  "sourceRef": "origin/claude/zealous-sagan-nbxbfo",
+  "sourceCommit": "34d2c1571e174081e15258364c730f6fef5547a4",
+  "images": {
+    "egg": [
+      {
+        "source": "reference/vbdm_by_tree/03_Agumon EX/0_엠블럼_디지타마/vbdm_digitama_bota.gif",
+        "destination": "assets/monsters/egg_1.gif",
+        "sha256": "8017bd40f05728be53ba99be698f1e1b0774c5b0437059a19d6297d5515c7154",
+        "width": 36,
+        "height": 36
+      }
+    ],
+    "ttol": [
+      {
+        "source": "reference/vbdm_by_tree/03_Agumon EX/1_유년기I/Botamon/vbdm_bota.gif",
+        "destination": "assets/monsters/ttol_1.gif",
+        "sha256": "37d571c11279b97971504b5a57e118f0d1ffeffdd0d743961ee5dbaa754b5562",
+        "width": 72,
+        "height": 72
+      },
+      {
+        "source": "reference/vbdm_by_tree/03_Agumon EX/1_유년기I/Botamon/vbdm_frame2_bota.gif",
+        "destination": "assets/monsters/ttol_2.gif",
+        "sha256": "b23809c9f179fc4d22d8b8350edf5a29fc75ac90543f0c354a6b0c66e0eaa92d",
+        "width": 72,
+        "height": 72
+      }
+    ],
+    "ttolttol": [
+      {
+        "source": "reference/vbdm_by_tree/03_Agumon EX/2_유년기II/Koromon/vbdm_koro.gif",
+        "destination": "assets/monsters/ttolttol_1.gif",
+        "sha256": "24345ef5d6a9bc934242bee5de5790e3d2e2ab07e385b75da9936427b6e0681a",
+        "width": 72,
+        "height": 72
+      },
+      {
+        "source": "reference/vbdm_by_tree/03_Agumon EX/2_유년기II/Koromon/vbdm_frame2_koro.gif",
+        "destination": "assets/monsters/ttolttol_2.gif",
+        "sha256": "d69b84ae7f54576c095773207d7c01047c00a2f9ffd4534c279bafe39f89c38b",
+        "width": 72,
+        "height": 72
+      }
+    ],
+    "piko": [
+      {
+        "source": "reference/vbdm_by_tree/03_Agumon EX/3_성장기/Agumon/vbdm_agu.gif",
+        "destination": "assets/monsters/piko_1.gif",
+        "sha256": "54f5f396897d34178623ba1588fecd09088a352457b3407f6b9286e434b9e0d7",
+        "width": 72,
+        "height": 72
+      },
+      {
+        "source": "reference/vbdm_by_tree/03_Agumon EX/3_성장기/Agumon/vbdm_frame2_agu.gif",
+        "destination": "assets/monsters/piko_2.gif",
+        "sha256": "018539a7ef3253042b235f83c7fb7e115f35a90cbf0170f0872dbc4d06a97fa7",
+        "width": 72,
+        "height": 72
+      }
+    ],
+    "monggle": [
+      {
+        "source": "reference/vbdm_by_tree/16_Jellymon/3_성장기/Jellymon/vbdm_jelly.gif",
+        "destination": "assets/monsters/monggle_1.gif",
+        "sha256": "31c4a97191a0c15181b2064d6e358ef89e0292d1a6685f328f7e77f2909ace37",
+        "width": 72,
+        "height": 72
+      },
+      {
+        "source": "reference/vbdm_by_tree/16_Jellymon/3_성장기/Jellymon/vbdm_frame2_jelly.gif",
+        "destination": "assets/monsters/monggle_2.gif",
+        "sha256": "7133f13913db46501bd1bb65ddcdafc60c01946e1441f7fc40a59b5fda00f49d",
+        "width": 72,
+        "height": 72
+      }
+    ],
+    "volt": [
+      {
+        "source": "reference/vbdm_by_tree/04_Gabumon EX/4_성숙기/Garurumon/vbdm_garuru.gif",
+        "destination": "assets/monsters/volt_1.gif",
+        "sha256": "aba25d45ff8fa4c94a946963ae1a80e2cca19fa84f0b7b6b71f41b2c4be21b38",
+        "width": 72,
+        "height": 72
+      },
+      {
+        "source": "reference/vbdm_by_tree/04_Gabumon EX/4_성숙기/Garurumon/vbdm_frame2_garuru.gif",
+        "destination": "assets/monsters/volt_2.gif",
+        "sha256": "a3b8822c928f9025a3cd77a92bad403d0770f86f8b8f2879fa37f6bc3cfa95a1",
+        "width": 72,
+        "height": 72
+      }
+    ],
+    "kara": [
+      {
+        "source": "reference/vbdm_by_tree/05_Volcanic Beat/4_성숙기/Birdramon/vbdm_birdra.gif",
+        "destination": "assets/monsters/kara_1.gif",
+        "sha256": "41f1767dc0d28efc946ba934361c40f4fe1ddf6bfa6eb7b12110d05b5689b254",
+        "width": 72,
+        "height": 72
+      },
+      {
+        "source": "reference/vbdm_by_tree/05_Volcanic Beat/4_성숙기/Birdramon/vbdm_frame2_birdra.gif",
+        "destination": "assets/monsters/kara_2.gif",
+        "sha256": "28249a03ad904fca95fccb3111e5d02fe3e605c7f48dd9f8565835f8e2a2bf54",
+        "width": 72,
+        "height": 72
+      }
+    ],
+    "mungchi": [
+      {
+        "source": "reference/vbdm_by_tree/25_Chackmon EX/4_성숙기/Gryzmon/vbdm_gryz.gif",
+        "destination": "assets/monsters/mungchi_1.gif",
+        "sha256": "3b8f78eac9a456b60748f87ff3763b5b9a473006e8b4236bcbe81b188bc8be8b",
+        "width": 72,
+        "height": 72
+      },
+      {
+        "source": "reference/vbdm_by_tree/25_Chackmon EX/4_성숙기/Gryzmon/vbdm_frame2_gryz.gif",
+        "destination": "assets/monsters/mungchi_2.gif",
+        "sha256": "a3e0cac5e9e87b2c72b448cd5a1a17138b90248fcd09372336da720a1fbf8ef7",
+        "width": 72,
+        "height": 72
+      }
+    ],
+    "jellion": [
+      {
+        "source": "reference/vbdm_by_tree/07_Infinite Tide/4_성숙기/Shellmon/vbdm_shell.gif",
+        "destination": "assets/monsters/jellion_1.gif",
+        "sha256": "66aee5011865f13cb01a86f72ec4694625ce7a990cc44b0d68b8162169dd4134",
+        "width": 72,
+        "height": 72
+      },
+      {
+        "source": "reference/vbdm_by_tree/07_Infinite Tide/4_성숙기/Shellmon/vbdm_frame2_shell.gif",
+        "destination": "assets/monsters/jellion_2.gif",
+        "sha256": "ba9e2dc2845a187f2a832fca67ebc95ac59346e842a2456cdaadf3070410ee29",
+        "width": 72,
+        "height": 72
+      }
+    ],
+    "mush": [
+      {
+        "source": "reference/vbdm_by_tree/09_Hermit in the Jungle/4_성숙기/Vegimon/vbdm_vegi.gif",
+        "destination": "assets/monsters/mush_1.gif",
+        "sha256": "c6c8b577152adfb5ccbf76592eecbe8c5b7167d7e2d1c1d10231b553d9ce93ae",
+        "width": 72,
+        "height": 72
+      },
+      {
+        "source": "reference/vbdm_by_tree/09_Hermit in the Jungle/4_성숙기/Vegimon/vbdm_frame2_vegi.gif",
+        "destination": "assets/monsters/mush_2.gif",
+        "sha256": "2bf6ec73075774e432b07b0388561a0683ae8adde5ef61e6a3e9d45f6b58ee90",
+        "width": 72,
+        "height": 72
+      }
+    ],
+    "noise": [
+      {
+        "source": "reference/vbdm_by_tree/11_Dynasty of the Evil/4_성숙기/Bakemon/vbdm_bake.gif",
+        "destination": "assets/monsters/noise_1.gif",
+        "sha256": "f21a0f55bf00495b9a3b2bd9a517886a15a907d219593a9712c8ae09db4ed09d",
+        "width": 72,
+        "height": 72
+      },
+      {
+        "source": "reference/vbdm_by_tree/11_Dynasty of the Evil/4_성숙기/Bakemon/vbdm_frame2_bake.gif",
+        "destination": "assets/monsters/noise_2.gif",
+        "sha256": "2e9a6f535b7ab750d3634691b5d146c9507c01d8f5a183a5a51d585940fb9054",
+        "width": 72,
+        "height": 72
+      }
+    ],
+    "raiga": [
+      {
+        "source": "reference/vbdm_by_tree/03_Agumon EX/5_완전체/Metal Greymon (Vaccine)/vbdm_metalgrey_va.gif",
+        "destination": "assets/monsters/raiga_1.gif",
+        "sha256": "9a18ef7f974f176e833192223106bf3ccbde5293ad9f4988f084dd631e9a2ded",
+        "width": 72,
+        "height": 72
+      },
+      {
+        "source": "reference/vbdm_by_tree/03_Agumon EX/5_완전체/Metal Greymon (Vaccine)/vbdm_frame2_metalgrey_va.gif",
+        "destination": "assets/monsters/raiga_2.gif",
+        "sha256": "382928fb43db5f6f039157e910ba99c19a62999d7fa10fc6c2fa3c2c3e6f066d",
+        "width": 72,
+        "height": 72
+      }
+    ],
+    "grove": [
+      {
+        "source": "reference/vbdm_by_tree/24_Fairimon EX/5_완전체/Petaldramon/vbdm_petaldra.gif",
+        "destination": "assets/monsters/grove_1.gif",
+        "sha256": "04e44fa84365d64022c6335e90712ef1a9ae41b604250424159685d2606c3bd5",
+        "width": 72,
+        "height": 72
+      },
+      {
+        "source": "reference/vbdm_by_tree/24_Fairimon EX/5_완전체/Petaldramon/vbdm_frame2_petaldra.gif",
+        "destination": "assets/monsters/grove_2.gif",
+        "sha256": "163063d3ee82194e9870cb3bbd3927811f6459f82f68fd24067cd64a65098efa",
+        "width": 72,
+        "height": 72
+      }
+    ],
+    "buglord": [
+      {
+        "source": "reference/vbdm_by_tree/11_Dynasty of the Evil/5_완전체/Vamdemon/vbdm_vamde.gif",
+        "destination": "assets/monsters/buglord_1.gif",
+        "sha256": "6db84c6a5af25a5465c8eea7ca97a119fcaee3dbed992d34de2f51bb63be256f",
+        "width": 72,
+        "height": 72
+      },
+      {
+        "source": "reference/vbdm_by_tree/11_Dynasty of the Evil/5_완전체/Vamdemon/vbdm_frame2_vamde.gif",
+        "destination": "assets/monsters/buglord_2.gif",
+        "sha256": "ef786f86636c7fd729e7f94fd21856096929062673d316640b1786dc5b54ad59",
+        "width": 72,
+        "height": 72
+      }
+    ]
+  }
+}

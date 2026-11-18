@@ -1,0 +1,18 @@
+{
+  "id": "./",
+  "name": "도트몬",
+  "short_name": "도트몬",
+  "description": "실제 시간으로 키우는 도트 몬스터. 인터넷 없이도 돌볼 수 있어요.",
+  "lang": "ko",
+  "dir": "ltr",
+  "start_url": "./",
+  "scope": "./",
+  "display": "standalone",
+  "orientation": "portrait",
+  "background_color": "#20281f",
+  "theme_color": "#2b3a2a",
+  "icons": [
+    { "src": "icons/icon-192.png", "sizes": "192x192", "type": "image/png", "purpose": "any maskable" },
+    { "src": "icons/icon-512.png", "sizes": "512x512", "type": "image/png", "purpose": "any maskable" }
+  ]
+}

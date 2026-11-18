@@ -1,0 +1,71 @@
+<!doctype html>
+<html lang="ko">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+  <meta name="theme-color" content="#20281f">
+  <meta name="description" content="디지몬을 실제 시간으로 돌보는 작은 LCD 육성 게임. 밥, 훈련, 대전과 다양한 진화.">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+  <meta name="apple-mobile-web-app-title" content="도트몬">
+  <title>도트몬 · 디지몬 육성</title>
+  <link rel="manifest" href="manifest.webmanifest">
+  <link rel="icon" href="icons/icon-192.png">
+  <link rel="apple-touch-icon" href="icons/icon-192.png">
+  <link rel="stylesheet" href="css/style.css">
+</head>
+<body>
+  <main class="app">
+    <header class="top">
+      <div><p class="eyebrow">DIGITAL PET / REAL TIME</p><h1 class="title">도트몬<span class="title-dot" aria-hidden="true"></span></h1></div>
+      <div class="top-status"><time id="clock" class="clock" aria-label="게임 시각">--:--</time><span id="save-status" class="save-status" role="status">자동 저장</span></div>
+    </header>
+
+    <section class="device" aria-label="휴대용 육성 기기">
+      <div class="device-label"><span>DIGIMON LINK</span><span class="power-light" aria-hidden="true"></span></div>
+      <div class="bezel">
+        <canvas id="lcd" tabindex="0" role="button" aria-label="몬스터 화면. 훈련 중 탭하거나 스페이스 또는 엔터로 발사" aria-describedby="scene-hint"></canvas>
+      </div>
+      <div id="call" class="call" role="status" hidden></div>
+      <div class="device-foot"><span id="scene-hint" role="status" aria-live="polite">알이 곧 깨어나요. 실제 시간 1분을 기다려 주세요.</span><span class="vent" aria-hidden="true">≡ ≡ ≡</span></div>
+      <button id="btn-tap" class="wide primary tap-button" type="button" hidden>화면 탭 / 발사</button>
+    </section>
+
+    <section class="hud" aria-label="몬스터 상태">
+      <div class="hud-name"><b id="hud-name">알</b><span id="hud-stage" class="muted">부화 대기</span></div>
+      <div class="hud-bars"><span>배고픔 <i id="hud-hunger">-</i></span><span>힘 <i id="hud-strength">-</i></span></div>
+      <div class="mood-row"><span id="hud-mood">두근두근</span><span>친밀도 <b id="hud-bond">0/100</b></span></div>
+      <div class="growth"><div class="growth-caption"><span>EVOLUTION LINK</span><span id="growth-label">부화 준비 중</span></div><progress id="growth-progress" value="0" max="100" aria-label="진화 시간 진행도"></progress></div>
+      <button id="btn-egg" class="wide primary" type="button" hidden>새 알 받기</button>
+    </section>
+
+    <section class="care-panel" aria-label="돌보기 바로가기">
+      <div class="care-heading"><div><p class="eyebrow">CARE CONNECTION</p><b id="care-summary">새로운 만남을 기다려요</b></div><button type="button" data-extra="care" class="care-go">돌보기 →</button></div>
+      <div class="care-tools"><button type="button" data-extra="play">함께 놀기</button><button type="button" data-extra="daily"><span id="daily-summary">오늘의 돌봄 0/4</span></button></div>
+      <div class="connection-row"><button type="button" data-extra="rest"><span id="rest-status">실제 시간 돌보기</span></button><button type="button" data-extra="push"><span id="push-status">푸시 설정</span></button></div>
+    </section>
+
+    <nav class="actions" id="actions" aria-label="돌보기 메뉴">
+      <button type="button" data-act="status"><span class="ico" aria-hidden="true">▥</span>상태</button>
+      <button type="button" data-act="feed"><span class="ico" aria-hidden="true">◒</span>밥</button>
+      <button type="button" data-act="train"><span class="ico" aria-hidden="true">◎</span>훈련</button>
+      <button type="button" data-act="battle"><span class="ico" aria-hidden="true">⚔</span>대전</button>
+      <button type="button" data-act="clean"><span class="ico" aria-hidden="true">▤</span>청소</button>
+      <button type="button" data-act="heal"><span class="ico" aria-hidden="true">✚</span>치료</button>
+      <button type="button" data-act="lights"><span class="ico" aria-hidden="true">☼</span>불</button>
+      <button type="button" data-act="more"><span class="ico" aria-hidden="true">≡</span>메뉴</button>
+    </nav>
+    <footer class="app-foot">작은 돌봄이, 다음 진화를 만듭니다.<span>진행 상황은 이 브라우저에 저장됩니다.</span></footer>
+    <noscript><p class="error">플레이하려면 브라우저에서 JavaScript를 켜 주세요.</p></noscript>
+  </main>
+
+  <dialog id="sheet" aria-labelledby="sheet-title">
+    <form method="dialog" class="sheet-head"><h2 id="sheet-title"></h2><button class="x" aria-label="닫기">×</button></form>
+    <div id="sheet-status" class="sheet-status" role="status" aria-live="polite" hidden></div>
+    <div id="sheet-body" class="sheet-body"></div>
+  </dialog>
+  <div id="toast" class="toast" role="status" aria-live="polite" hidden></div>
+  <script type="module" src="js/main.js"></script>
+</body>
+</html>

@@ -6,19 +6,22 @@ export const SAVE_VERSION = 1;
 export const LCD_W = 48;
 export const LCD_H = 24;
 
-export const STAGE_ORDER = ['egg', 'baby', 'child', 'rookie', 'champion', 'ultimate'];
+// 단계 ID는 세이브 호환을 위해 유지한다 (baby=유년기 I … ultimate=완전체, mega=궁극체).
+export const STAGE_ORDER = ['egg', 'baby', 'child', 'rookie', 'champion', 'ultimate', 'mega', 'super'];
 
 export const STAGE_LABEL = {
-  egg: '알',
-  baby: '유아기',
-  child: '유년기',
+  egg: '디지타마',
+  baby: '유년기 I',
+  child: '유년기 II',
   rookie: '성장기',
   champion: '성숙기',
   ultimate: '완전체',
+  mega: '궁극체',
+  super: '초궁극체',
 };
 
 // 단계별 기본값. 종(species)마다 덮어쓸 수 있다.
-// duration: 다음 단계로 진화하기까지 걸리는 시간
+// duration: 다음 단계로 진화하기까지 걸리는 시간 (진화할 곳이 없는 종은 그대로 머문다)
 // hungerEvery / strengthEvery: 깨어 있는 동안 하트 1칸이 줄어드는 간격
 // poopEvery: 깨어 있는 동안 똥을 싸는 간격
 // callTimeout: 배고픔/힘이 0인 상태로 이 시간이 지나면 케어 실수
@@ -28,7 +31,9 @@ export const STAGE_CONFIG = {
   child: { duration: 180, hungerEvery: 30, strengthEvery: 30, poopEvery: 40, callTimeout: 30, minWeight: 10 },
   rookie: { duration: 1440, hungerEvery: 60, strengthEvery: 60, poopEvery: 90, callTimeout: 60, minWeight: 15 },
   champion: { duration: 2880, hungerEvery: 75, strengthEvery: 75, poopEvery: 120, callTimeout: 60, minWeight: 20 },
-  ultimate: { duration: Infinity, hungerEvery: 90, strengthEvery: 90, poopEvery: 150, callTimeout: 60, minWeight: 30 },
+  ultimate: { duration: 4320, hungerEvery: 90, strengthEvery: 90, poopEvery: 150, callTimeout: 60, minWeight: 30 },
+  mega: { duration: 4320, hungerEvery: 100, strengthEvery: 100, poopEvery: 180, callTimeout: 60, minWeight: 40 },
+  super: { duration: Infinity, hungerEvery: 110, strengthEvery: 110, poopEvery: 180, callTimeout: 60, minWeight: 50 },
 };
 
 export const MAX_HEARTS = 4;

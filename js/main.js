@@ -1,12 +1,15 @@
 // Browser controller for the v1 core. Game rules remain in game.js.
 
-import { STAGE_LABEL, MAX_HEARTS, TRAIN_PASS, TRAIN_ROUNDS, GAME_TITLE } from './config.js';
+import { STAGE_LABEL, STAGE_ORDER, MAX_HEARTS, TRAIN_PASS, TRAIN_ROUNDS, GAME_TITLE } from './config.js';
 import {
   advance, callReasons, feedMeat, feedVitamin, canTrain, applyTraining, clean, heal,
   toggleLights, canBattle, applyBattleResult, rename, newEgg, minutesToEvolve,
-  summarizeEvents, stageOf,
+  summarizeEvents, stageOf, evolutionContext,
 } from './game.js';
-import { SPECIES, SPECIES_ORDER, speciesOf } from './species.js';
+import {
+  SPECIES, SPECIES_ORDER, speciesOf, TREES, TREE_ORDER, isKnownTree,
+  evolutionRules, evolutionHints, matchesCond, condText, visualId, eggVisualId,
+} from './species.js';
 import { battlePower, simulateBattle, makeWildOpponent } from './battle.js';
 import { encodeFriendCode, decodeFriendCode, encodeSave, decodeSave } from './share.js';
 import * as storage from './storage.js';
@@ -218,7 +221,7 @@ function updateHud() {
   text($('#clock'), `${date.getHours()}:${String(date.getMinutes()).padStart(2, '0')}${state.settings.speed > 1 ? ` ×${state.settings.speed}` : ''}`);
   $('#btn-egg').hidden = Boolean(pet && !pet.dead);
   text($('#hud-name'), !pet ? '키우는 몬스터가 없어요' : pet.dead ? `${petName(pet)}의 무덤` : petName(pet));
-  const labels = pet ? [STAGE_LABEL[stageOf(pet)], pet.name ? speciesOf(pet.species).name : null, speciesOf(pet.species).digimonName] : [];
+  const labels = pet ? [STAGE_LABEL[stageOf(pet)], pet.name && stageOf(pet) !== 'egg' ? speciesOf(pet.species).name : null, treeName(pet.tree)] : [];
   text($('#hud-stage'), labels.filter(Boolean).join(' · '));
   const showHearts = pet && !pet.dead && stageOf(pet) !== 'egg';
   text($('#hud-hunger'), showHearts ? hearts(pet.hunger) : '-');
@@ -286,7 +289,7 @@ function handleEvents(events, live) {
   const evolutions = events.filter((event) => event.type === 'hatch' || event.type === 'evolve');
   const last = evolutions[evolutions.length - 1];
   if (last && pet && !pet.dead && last.to === pet.species) {
-    pushScene(new EvolveScene(last.from, last.to, last.type === 'hatch', motionOptions()));
+    pushScene(new EvolveScene(last.type === 'hatch' ? eggVisualId(pet.tree) : last.from, last.to, last.type === 'hatch', motionOptions()));
     toast(`${speciesOf(last.to).name}(으)로 ${last.type === 'hatch' ? '태어났어요' : '진화했어요'}`);
   }
 }
@@ -438,7 +441,7 @@ const ACTIONS = {
       h('div', { class: 'row2' },
         h('button', { class: 'primary', onclick: () => { closeSheet(); feed('meat'); } }, '고기', h('br'), h('small', {}, '배고픔 +1')),
         h('button', { class: 'primary', onclick: () => { closeSheet(); feed('pill'); } }, '비타민', h('br'), h('small', {}, '힘 +1'))),
-      h('p', { class: 'muted' }, '배가 부른데 고기를 더 주면 과식으로 기록돼요. 과식은 진화에 영향을 줄 수 있어요.'),
+      h('p', { class: 'muted' }, '배가 부른데 고기를 더 주면 과식으로 기록돼요. 과식하면 몸무게가 늘어 대전력이 떨어질 수 있어요.'),
     ]);
   },
   train,
@@ -537,7 +540,7 @@ function h(tag, attributes = {}, ...children) {
 
 function openSheet(title, nodes) {
   text($('#sheet-title'), title);
-  $('#sheet-body').replaceChildren(...nodes);
+  $('#sheet-body').replaceChildren(...nodes.flat(Infinity).filter((node) => node != null && node !== false));
   if ($('#sheet-status')) {
     text($('#sheet-status'), '');
     $('#sheet-status').hidden = true;
@@ -554,8 +557,14 @@ function closeSheet() {
 sheet.addEventListener('click', (event) => { if (event.target === sheet) closeSheet(); });
 sheet.addEventListener('close', updateSceneUi);
 
+function treeName(id) {
+  return isKnownTree(id) ? `${TREES[id].name} 트리` : null;
+}
+
+/** species: 종 ID 또는 알 그림 ID(egg:<무늬>). 알 그림은 options.label로 이름을 준다. */
 function thumb(species, options) {
-  const element = h('canvas', { class: 'thumb', 'aria-label': options?.silhouette ? '아직 만나지 못한 몬스터' : speciesLabel(species) });
+  const label = options?.silhouette ? '아직 만나지 못한 몬스터' : options?.label || speciesLabel(species);
+  const element = h('canvas', { class: 'thumb', 'aria-label': label });
   drawThumb(element, species, options);
   return element;
 }
@@ -574,6 +583,24 @@ function kv(pairs) {
   return h('dl', { class: 'kv' }, pairs.map(([key, value]) => [h('dt', {}, key), h('dd', {}, value)]));
 }
 
+/** 상태 화면의 진화 후보 목록. 위에서부터 먼저 만족한 쪽으로 진화한다. */
+function evolutionCandidates(pet) {
+  if (pet.dead || stageOf(pet) === 'egg') return [];
+  const rules = evolutionRules(pet.species, pet.tree);
+  if (!rules.length) return [];
+  const ctx = evolutionContext(pet, state.dex);
+  return [
+    h('h3', {}, '진화 후보'),
+    h('p', { class: 'muted' }, '진화 시간이 되면 위에서부터 조건을 확인해, 처음 만족한 디지몬으로 진화해요.'),
+    h('div', { class: 'list' }, rules.map((rule) => {
+      const known = Boolean(state.dex[rule.to]);
+      return h('div', { class: 'card' }, thumb(rule.to, { silhouette: !known }), h('div', { class: 'grow' },
+        h('b', {}, `${known ? speciesLabel(rule.to) : '???'} ${matchesCond(rule.cond, ctx) ? '· 조건 달성' : ''}`),
+        h('div', { class: 'sub' }, `${STAGE_LABEL[SPECIES[rule.to].stage]} · ${condText(rule.cond)}`)));
+    })),
+  ];
+}
+
 function openStatus() {
   const pet = state.pet;
   if (!pet) return fail({ reason: 'none' });
@@ -582,11 +609,11 @@ function openStatus() {
   const rate = pet.stageBattles ? `${Math.round(pet.stageWins / pet.stageBattles * 100)}%` : '-';
   const nameInput = h('input', { value: pet.name, maxlength: 8, placeholder: species.name, 'aria-label': '몬스터 이름' });
   openSheet('상태', [
-    h('div', { class: 'card' }, thumb(pet.species), h('div', { class: 'grow' },
+    h('div', { class: 'card' }, thumb(visualId(pet), { label: speciesLabel(pet.species) }), h('div', { class: 'grow' },
       h('b', {}, petName(pet)), h('div', { class: 'sub' }, `${speciesLabel(pet.species)} · ${STAGE_LABEL[species.stage]}`),
       h('div', { class: 'sub' }, species.desc || ''))),
     kv([
-      ['나이', fmtDuration(pet.ageMin)], ['몸무게', `${pet.weight}g`],
+      ['트리', treeName(pet.tree) || '-'], ['나이', fmtDuration(pet.ageMin)], ['몸무게', `${pet.weight}g`],
       ['배고픔', hearts(pet.hunger)], ['힘', hearts(pet.strength)], ['대전력', battlePower(pet)],
       ['다음 진화', pet.dead ? '-' : left == null ? '최종 단계' : left === 0 ? '진화 조건 달성을 기다려요' : `${fmtDuration(left)} 뒤`],
       ['상태', pet.dead ? DEATH_TEXT[pet.deathCause] || '세상을 떠났어요' : pet.sick ? '아파요' : pet.asleep ? '자는 중' : '깨어 있어요'],
@@ -596,6 +623,7 @@ function openStatus() {
       ['대전', `${pet.stageBattles}전 ${pet.stageWins}승 (${rate})`],
       ['훈련 성공', pet.stageTrain], ['과식', pet.overfeed], ['케어 실수', pet.stageMistakes],
     ]),
+    ...evolutionCandidates(pet),
     h('h3', {}, '통산'),
     kv([
       ['대전', `${pet.battles}전 ${pet.wins}승`], ['훈련 성공', pet.trainTotal],
@@ -787,7 +815,7 @@ function replayEvolution() {
   const from = path[path.length - 2];
   const to = path[path.length - 1];
   closeSheet();
-  pushScene(new EvolveScene(from, to, from === 'egg', motionOptions()));
+  pushScene(new EvolveScene(from === 'egg' ? eggVisualId(state.pet.tree) : from, to, from === 'egg', motionOptions()));
   toast('최근 진화 다시보기 · 기록과 능력치는 바뀌지 않아요');
 }
 
@@ -915,7 +943,7 @@ function openNotificationCare(care, petId = '') {
   const token = pet;
   const title = { feed: '식사 챙기기', vitamin: '비타민 주기', clean: '청소하기', heal: '치료하기', lights: '불 확인하기', open: '성장 확인하기' }[care];
   openSheet(title, [
-    h('div', { class: 'card' }, thumb(pet.species), h('div', { class: 'grow' }, h('b', {}, petName(pet)), h('p', { class: 'sub' }, moodOf(pet, state.extras)))),
+    h('div', { class: 'card' }, thumb(visualId(pet), { label: speciesLabel(pet.species) }), h('div', { class: 'grow' }, h('b', {}, petName(pet)), h('p', { class: 'sub' }, moodOf(pet, state.extras)))),
     h('p', {}, '예약 당시와 현재 상태가 다를 수 있어요. 상태를 확인한 뒤 돌봐 주세요.'),
     h('button', { class: 'primary', onclick: () => {
       if (state.pet !== token) return toast('몬스터가 바뀌었어요. 알림을 다시 확인해 주세요');
@@ -951,48 +979,82 @@ function openMenu() {
 
 function openEggPicker() {
   const pet = state.pet;
+  const seenIn = (tree) => tree.members.filter((id) => state.dex[id]).length;
+  const choose = (treeId) => {
+    const tree = TREES[treeId];
+    if (!confirm(`${tree.name} 디지타마를 받을까요? 지금 몬스터는 기록에 남고, 되돌릴 수 없어요.`)) return;
+    resetScenes();
+    advanceClock(false);
+    newEgg(state, treeId);
+    ensureExtras(state);
+    logCare(state, 'new', `${tree.name} 디지타마와의 만남을 시작했어요`);
+    awayEvents = [];
+    awayClock = null;
+    closeSheet();
+    play('ok');
+    changed();
+    toast(`${tree.name} 디지타마를 받았어요`);
+  };
   openSheet('새 알 받기', [
-    h('div', { class: 'card' }, thumb('egg'), h('div', { class: 'grow' }, h('b', {}, speciesLabel('egg')), h('div', { class: 'sub' }, '게임 시간 1분 뒤 부화해요'))),
-    h('p', {}, pet && !pet.dead ? `지금 키우는 ${petName(pet)} 대신 새 알을 받아요. 이 선택은 되돌릴 수 없어요.` : '지난 몬스터를 기록에 남기고 새 알을 받아요.'),
-    h('button', { class: pet && !pet.dead ? 'danger' : 'primary', onclick: () => {
-      if (!confirm('지금 몬스터 대신 새 알을 받을까요? 되돌릴 수 없어요.')) return;
-      resetScenes();
-      advanceClock(false);
-      newEgg(state);
-      ensureExtras(state);
-      logCare(state, 'new', '새 알과의 만남을 시작했어요');
-      awayEvents = [];
-      awayClock = null;
-      closeSheet();
-      play('ok');
-      changed();
-      toast('새 알을 받았어요');
-    } }, '새 알 받기'),
+    h('p', {}, pet && !pet.dead ? `지금 키우는 ${petName(pet)} 대신 새 디지타마를 받아요. 이 선택은 되돌릴 수 없어요.` : '지난 몬스터를 기록에 남기고 새 디지타마를 받아요.'),
+    h('p', { class: 'muted' }, `디지타마마다 진화 트리가 달라요. 모두 ${TREE_ORDER.length}종류이고 게임 시간 1분 뒤 부화해요.`),
+    h('button', { class: pet && !pet.dead ? 'danger' : 'primary', onclick: () => choose(TREE_ORDER[Math.floor(Math.random() * TREE_ORDER.length)]) }, '아무 디지타마나 받기'),
+    h('div', { class: 'dex' }, TREE_ORDER.map((id) => {
+      const tree = TREES[id];
+      return h('button', { 'data-tree': id, onclick: () => choose(id) },
+        thumb(eggVisualId(id), { label: `${tree.name} 디지타마` }), tree.name,
+        h('span', { class: 'muted' }, `도감 ${seenIn(tree)}/${tree.members.length}`));
+    })),
   ]);
 }
 
+let dexFilter = 'all';
 function openDex() {
   const seen = (id) => Boolean(state.dex[id]);
   const count = SPECIES_ORDER.filter(seen).length;
-  openSheet(`도감 ${count}/${SPECIES_ORDER.length}`, [
-    h('div', { class: 'dex' }, SPECIES_ORDER.map((id) =>
+  const filter = h('select', { 'aria-label': '도감 분류' },
+    h('option', { value: 'all' }, `전체 (${count}/${SPECIES_ORDER.length})`),
+    h('option', { value: 'seen' }, `만난 디지몬 (${count})`),
+    h('optgroup', { label: '단계' }, STAGE_ORDER.map((stage) => {
+      const ids = SPECIES_ORDER.filter((id) => SPECIES[id].stage === stage);
+      return h('option', { value: `stage:${stage}` }, `${STAGE_LABEL[stage]} (${ids.filter(seen).length}/${ids.length})`);
+    })),
+    h('optgroup', { label: '진화 트리' }, TREE_ORDER.map((id) =>
+      h('option', { value: `tree:${id}` }, `${TREES[id].name} (${TREES[id].members.filter(seen).length}/${TREES[id].members.length})`))));
+  const grid = h('div', { class: 'dex' });
+  const render = () => {
+    const [kind, value] = dexFilter.split(':');
+    const ids = kind === 'stage' ? SPECIES_ORDER.filter((id) => SPECIES[id].stage === value)
+      : kind === 'tree' && isKnownTree(value) ? TREES[value].members
+        : kind === 'seen' ? SPECIES_ORDER.filter(seen) : SPECIES_ORDER;
+    grid.replaceChildren(...(ids.length ? ids.map((id) =>
       h('button', { onclick: () => openDexEntry(id) }, thumb(id, { silhouette: !seen(id) }),
-        seen(id) ? speciesLabel(id) : '???', h('span', { class: 'muted' }, STAGE_LABEL[SPECIES[id].stage])))),
-  ]);
+        seen(id) ? speciesLabel(id) : '???', h('span', { class: 'muted' }, STAGE_LABEL[SPECIES[id].stage])))
+      : [h('p', { class: 'muted' }, '아직 만난 디지몬이 없어요.')]));
+  };
+  filter.value = dexFilter;
+  if (filter.value !== dexFilter) { dexFilter = 'all'; filter.value = 'all'; }
+  filter.addEventListener('change', () => { dexFilter = filter.value; render(); });
+  render();
+  openSheet(`도감 ${count}/${SPECIES_ORDER.length}`, [filter, grid]);
 }
 
 function openDexEntry(id) {
   const species = speciesOf(id);
   const known = Boolean(state.dex[id]);
   const name = (key) => state.dex[key] ? speciesLabel(key) : '???';
-  // Parent links are derived from the v1 species graph; no newer tree API needed.
   const parents = SPECIES_ORDER.filter((key) => SPECIES[key].evolutions.some((rule) => rule.to === id));
   const children = [...new Set(species.evolutions.map((rule) => rule.to))];
+  const hints = id === 'egg' ? [] : evolutionHints(id);
+  const trees = id === 'egg' ? [] : species.trees.map((tree) => TREES[tree].name);
   openSheet(known ? speciesLabel(id) : '???', [
     h('div', { class: 'card' }, thumb(id, { silhouette: !known }), h('div', { class: 'grow' },
-      h('b', {}, known ? speciesLabel(id) : '???'), h('div', { class: 'sub' }, STAGE_LABEL[species.stage]))),
-    h('p', {}, known ? species.desc || '' : species.hint || '아직 만나지 못했어요.'),
-    known && species.hint ? h('p', { class: 'muted' }, `진화 힌트: ${species.hint}`) : null,
+      h('b', {}, known ? speciesLabel(id) : '???'), h('div', { class: 'sub' }, STAGE_LABEL[species.stage]),
+      known && species.enName ? h('div', { class: 'sub' }, species.enName) : null)),
+    h('p', {}, known ? species.desc || '' : '아직 만나지 못했어요.'),
+    trees.length ? h('p', { class: 'muted' }, `진화 트리: ${trees.join(', ')}`) : null,
+    hints.length ? h('h3', {}, '진화 힌트') : null,
+    hints.length ? h('ul', { class: 'muted' }, hints.slice(0, 12).map((hint) => h('li', {}, hint))) : null,
     parents.length ? h('p', { class: 'muted' }, `이전 단계: ${parents.map(name).join(', ')}`) : null,
     children.length ? h('p', { class: 'muted' }, `다음 단계: ${children.map(name).join(', ')}`) : null,
     h('button', { onclick: openDex }, '도감으로 돌아가기'),
@@ -1124,7 +1186,7 @@ function openHelp() {
     h('h3', {}, '진화 연출과 꾸미기'),
     h('p', {}, '기기 꾸미기에서 3가지 테마, 동작 줄이기와 최근 진화 다시보기를 선택해요. 다시보기는 기록이나 능력치를 바꾸지 않아요.'),
     h('h3', {}, '진화'),
-    h('p', {}, '단계마다 정해진 시간이 지나면 케어 실수, 훈련, 과식, 대전 기록으로 다음 모습이 정해져요. 성숙기에서 완전체로 진화하려면 이번 단계 8전 이상, 승률 60% 이상이 필요해요. 상태 화면과 도감을 참고해 주세요.'),
+    h('p', {}, '디지타마(알)마다 진화 트리가 달라요. 단계마다 정해진 시간이 지나면 이번 단계의 훈련 성공, 대전 횟수, 승률, 케어 실수로 다음 모습이 정해져요. 성숙기부터는 조건을 채워야 진화하고, 일부 초궁극체는 도감에 파트너가 등록되어 있어야 하는 조그레스 진화예요. 상태 화면의 진화 후보와 도감을 참고해 주세요.'),
     h('h3', {}, '훈련 · 대전'),
     h('p', {}, '훈련은 오른쪽 게이지가 6칸 이상일 때 화면이나 탭 버튼을 눌러요. 화면에 초점을 맞추고 Space 또는 Enter로도 탭할 수 있어요. 5번 중 3번 맞히면 성공이에요. 대전은 성장기부터 할 수 있어요.'),
     h('p', {}, '훈련과 대전 중에는 게임 시간 반영을 잠시 미뤄요. 끝나면 지난 시간이 모두 반영돼요. 화면을 떠나면 진행 중인 경기는 취소되며 결과는 기록되지 않아요.'),

@@ -1,7 +1,7 @@
-// v1 세이브만 취급한다. 손상된 원본은 자동 저장으로 덮어쓰지 않는다.
+// v1 세이브만 취급한다. 초기 v1의 종 ID(똘·피코 등)는 읽을 때 현재 디지몬 키로 바꾼다. 손상된 원본은 자동 저장으로 덮어쓰지 않는다.
 import { SAVE_VERSION, DEFAULT_SETTINGS, MAX_HEARTS, POOP_MAX } from './config.js';
 import { createPet, createState } from './game.js';
-import { SPECIES } from './species.js';
+import { SPECIES, LEGACY_SPECIES, canonicalSpecies, inferTree, isKnownTree } from './species.js';
 import { normalizeExtras } from './care.js';
 
 export const SAVE_KEY = 'dotmon-save';
@@ -12,7 +12,8 @@ const MAX_COUNTER = 10_000_000;
 const MAX_WEIGHT = 100_000;
 const MAX_RECORDS = 50;
 const has = (value, key) => Object.prototype.hasOwnProperty.call(value, key);
-const knownSpecies = (id) => typeof id === 'string' && has(SPECIES, id);
+const knownSpecies = (id) => typeof id === 'string' && (has(SPECIES, id) || has(LEGACY_SPECIES, id));
+const DEX_KEYS = [...Object.keys(SPECIES), ...Object.keys(LEGACY_SPECIES)];
 const time = (value) => typeof value === 'number' && Number.isFinite(value) && value >= 0 && value <= MAX_TIME;
 const integer = (value, max = MAX_COUNTER) => Number.isSafeInteger(value) && value >= 0 && value <= max;
 const text = (value, max, empty = true) => typeof value === 'string' && value.length <= max && (empty || value.length > 0) && !/[\u0000-\u001f\u007f]/u.test(value);
@@ -24,7 +25,7 @@ const PET_COUNTERS = [
 ];
 const PET_BOOLEANS = ['sick', 'asleep', 'lightsOn', 'lightsPenalized', 'dead'];
 const PET_KEYS = [
-  'id', 'name', 'species', 'path', 'bornAt', 'hunger', 'strength', 'weight',
+  'id', 'name', 'species', 'tree', 'path', 'bornAt', 'hunger', 'strength', 'weight',
   'poop', 'deathCause', 'diedAt', ...PET_COUNTERS, ...PET_BOOLEANS,
 ];
 const RECORD_KEYS = ['name', 'species', 'path', 'bornAt', 'endedAt', 'ageMin', 'cause', 'battles', 'wins', 'mistakes'];
@@ -65,7 +66,7 @@ function list(value, max = MAX_RECORDS) {
 function path(value, species) {
   if (value === undefined) return [species];
   if (!list(value) || value.length === 0 || !value.every(knownSpecies)) return null;
-  return value.slice();
+  return value.map(canonicalSpecies);
 }
 function normalizePet(raw, now) {
   if (!record(raw, PET_KEYS) || !has(raw, 'species') || !knownSpecies(raw.species)) return null;
@@ -84,8 +85,12 @@ function normalizePet(raw, now) {
     if (key === 'deathCause' && value !== null && !['starve', 'sick'].includes(value)) return null;
     if (key === 'diedAt' && value !== null && !time(value)) return null;
     if (key === 'path' && (!list(value) || !value.length || !value.every(knownSpecies))) return null;
+    if (key === 'tree' && !isKnownTree(value)) return null;
     pet[key] = value;
   }
+  pet.species = canonicalSpecies(pet.species);
+  // 트리 정보가 없던 세이브는 지금 종이 속한 트리에서 이어서 자란다.
+  if (!has(raw, 'tree')) pet.tree = inferTree(pet.species);
   pet.path = path(has(raw, 'path') ? raw.path : undefined, pet.species);
   if (!pet.path || pet.wins > pet.battles || pet.stageWins > pet.stageBattles) return null;
   if (pet.dead && (pet.deathCause === null || pet.diedAt === null)) return null;
@@ -105,11 +110,12 @@ function normalizeSettings(raw) {
   return settings;
 }
 function normalizeDex(raw) {
-  if (!record(raw, Object.keys(SPECIES)) || Object.keys(raw).length > MAX_RECORDS) return null;
+  if (!record(raw, DEX_KEYS)) return null;
   const dex = {};
   for (const id of Object.keys(raw)) {
     if (!knownSpecies(id) || !time(raw[id])) return null;
-    dex[id] = raw[id];
+    const key = canonicalSpecies(id);
+    dex[key] = has(dex, key) ? Math.min(dex[key], raw[id]) : raw[id];
   }
   return dex;
 }
@@ -125,6 +131,7 @@ function normalizeRecord(raw, now) {
     if (key === 'path' && (!list(value) || !value.length || !value.every(knownSpecies))) return null;
     entry[key] = value;
   }
+  entry.species = canonicalSpecies(entry.species);
   entry.path = path(has(raw, 'path') ? raw.path : undefined, entry.species);
   if (!entry.path || entry.wins > entry.battles) return null;
   return entry;

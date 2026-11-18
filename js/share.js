@@ -4,7 +4,7 @@
 import { hashString } from './rng.js';
 import { isKnownSpecies } from './game.js';
 import { battlePower } from './battle.js';
-import { speciesOf } from './species.js';
+import { speciesOf, canonicalSpecies } from './species.js';
 
 function toBase64Url(str) {
   const bytes = new TextEncoder().encode(str);
@@ -46,11 +46,12 @@ export function decodeFriendCode(code) {
   if (checksum(body) !== sum) return null;
   try {
     const d = JSON.parse(fromBase64Url(body));
-    if (d.v !== 1 || !isKnownSpecies(d.s)) return null;
+    const species = canonicalSpecies(d.s); // 구버전 친구 코드의 종 ID도 받는다
+    if (d.v !== 1 || !isKnownSpecies(species)) return null;
     const power = Number(d.p);
     if (!Number.isFinite(power) || power < 1 || power > 300) return null;
     return {
-      species: d.s,
+      species,
       name: String(d.n || '').slice(0, 8),
       power,
       battles: Number(d.b) || 0,

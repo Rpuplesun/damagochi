@@ -21,7 +21,7 @@ import {
   TRAIN_WEIGHT_COST,
   DEFAULT_SETTINGS,
 } from './config.js';
-import { SPECIES, speciesOf, pickEvolution } from './species.js';
+import { SPECIES, speciesOf, pickEvolution, evolutionRules, isKnownTree, DEFAULT_TREE } from './species.js';
 import { randomSeed } from './rng.js';
 
 const MINUTE = 60 * 1000;
@@ -43,11 +43,13 @@ function makeId() {
   return randomSeed().toString(36) + Date.now().toString(36).slice(-4);
 }
 
-export function createPet(now) {
+/** tree: 어느 디지타마(진화 트리)에서 시작할지. */
+export function createPet(now, tree = DEFAULT_TREE) {
   return {
     id: makeId(),
     name: '',
     species: 'egg',
+    tree: isKnownTree(tree) ? tree : DEFAULT_TREE,
     path: ['egg'],
     bornAt: now,
     ageMin: 0,
@@ -157,8 +159,10 @@ function evolveTo(state, to, events) {
   events.push({ type: from === 'egg' ? 'hatch' : 'evolve', from, to, at: state.clock });
 }
 
-export function evolutionContext(pet) {
+export function evolutionContext(pet, dex = null) {
   return {
+    tree: pet.tree,
+    dex,
     mistakes: pet.stageMistakes,
     train: pet.stageTrain,
     overfeed: pet.overfeed,
@@ -171,7 +175,7 @@ function tryEvolve(state, events) {
   const pet = state.pet;
   const cfg = stageCfg(pet.species);
   if (pet.stageMin < cfg.duration) return;
-  const to = pickEvolution(pet.species, evolutionContext(pet));
+  const to = pickEvolution(pet.species, evolutionContext(pet, state.dex));
   if (to) evolveTo(state, to, events);
 }
 
@@ -415,8 +419,8 @@ export function rename(state, name) {
   state.pet.name = String(name || '').trim().slice(0, 8);
 }
 
-/** 지금 몬스터를 기록에 남기고 새 알을 받는다. */
-export function newEgg(state) {
+/** 지금 몬스터를 기록에 남기고 새 알을 받는다. tree로 디지타마를 고른다. */
+export function newEgg(state, tree = DEFAULT_TREE) {
   const pet = state.pet;
   if (pet && pet.species !== 'egg') {
     state.graveyard.unshift({
@@ -433,13 +437,13 @@ export function newEgg(state) {
     });
     state.graveyard = state.graveyard.slice(0, 50);
   }
-  state.pet = createPet(state.clock);
+  state.pet = createPet(state.clock, tree);
 }
 
-/** 다음 진화까지 남은 시간(분). 완전체거나 대전 조건이 남았으면 null. */
+/** 다음 진화까지 남은 시간(분). 더 진화할 곳이 없으면 null. */
 export function minutesToEvolve(pet) {
   const cfg = stageCfg(pet.species);
-  if (!Number.isFinite(cfg.duration)) return null;
+  if (!Number.isFinite(cfg.duration) || !evolutionRules(pet.species, pet.tree).length) return null;
   return Math.max(0, cfg.duration - pet.stageMin);
 }
 

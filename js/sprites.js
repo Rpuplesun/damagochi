@@ -1,10 +1,21 @@
 // '#' = 켜진 LCD 도트, '.' = 꺼진 도트.
-// 디지몬은 원본 GIF에서 만든 16×16 폴백. 컬러 원본은 LCD.monster()에서 쓴다.
-import { DIGIMON_SPRITE_FRAMES } from './digimon-assets.js';
+// 디지몬은 원본 이미지에서 만든 16×16 폴백. 컬러 원본은 LCD.monster()에서 쓴다.
+import { spriteInfo } from './species.js';
 
-export const MONSTER_SPRITES = Object.fromEntries(
-  Object.entries(DIGIMON_SPRITE_FRAMES).map(([id, frames]) => [id, frames[0]]),
-);
+/** 64자리 16진수(16×16 비트)를 {w, h, bits}로 푼다. */
+function unpackBits(hex) {
+  const bits = new Uint8Array(256);
+  for (let i = 0; i < 64; i++) {
+    const nibble = parseInt(hex[i], 16);
+    for (let b = 0; b < 4; b++) bits[i * 4 + b] = (nibble >> (3 - b)) & 1;
+  }
+  return { w: 16, h: 16, bits };
+}
+
+/** 디지몬/알 그림 ID인지 (아이콘 이름과 구분). */
+export function hasMonsterSprite(name) {
+  return Boolean(spriteInfo(name));
+}
 
 export const ICON_SPRITES = {
   grave: [
@@ -241,15 +252,14 @@ export function spriteFrame(frame, count) {
 }
 
 const cache = new Map();
-/** 기존 {w, h, bits} 계약 유지. 두 번째 인자를 주면 디지몬 포즈를 고른다. */
+/** 기존 {w, h, bits} 계약 유지. 디지몬 폴백은 한 포즈뿐이라 frame은 무시한다. */
 export function getSprite(name, frame = 0) {
-  const frames = DIGIMON_SPRITE_FRAMES[name];
-  const index = frames ? spriteFrame(frame, frames.length) : 0;
-  const key = `${name}:${index}`;
-  if (cache.has(key)) return cache.get(key);
-  const rows = frames ? frames[index] : ICON_SPRITES[name];
-  if (!rows) throw new Error(`unknown sprite: ${name}`);
-  const parsed = parseSprite(rows);
-  cache.set(key, parsed);
+  if (cache.has(name)) return cache.get(name);
+  const isIcon = Object.prototype.hasOwnProperty.call(ICON_SPRITES, name);
+  const info = isIcon ? null : spriteInfo(name);
+  const rows = isIcon ? ICON_SPRITES[name] : null;
+  if (!info && !rows) throw new Error(`unknown sprite: ${name}`);
+  const parsed = info ? unpackBits(info.bits) : parseSprite(rows);
+  cache.set(name, parsed);
   return parsed;
 }

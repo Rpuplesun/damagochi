@@ -111,10 +111,7 @@ export function growthInfo(pet) {
   const cfg = stageCfg(pet.species);
   const left = minutesToEvolve(pet);
   const percent = left === null ? 100 : Math.min(100, Math.floor(pet.stageMin / cfg.duration * 100));
-  let label = left === null ? '최종 단계에 도착했어요' : left === 0 ? '진화 조건을 확인하고 있어요' : `진화까지 게임 시간 ${left >= 60 ? `${Math.floor(left / 60)}시간 ${left % 60}분` : `${left}분`}`;
-  if (speciesOf(pet.species).stage === 'champion') {
-    const rate = pet.stageBattles ? Math.round(pet.stageWins / pet.stageBattles * 100) : 0;
-    label += ` · ${pet.stageBattles}/8전 · 승률 ${rate}%/60%`;
-  }
+  let label = left === null ? '최종 단계에 도착했어요' : left === 0 ? '진화 조건을 채우면 진화해요' : `진화까지 게임 시간 ${left >= 60 ? `${Math.floor(left / 60)}시간 ${left % 60}분` : `${left}분`}`;
+  if (left === 0) label = '진화 조건을 채우면 진화해요 · 상태에서 확인';
   return { percent, left, label };
 }

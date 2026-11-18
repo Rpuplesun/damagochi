@@ -1,9 +1,9 @@
 // LCD 화면 그리기. 논리 해상도(LCD_W x LCD_H 도트)를 정수 배율로 키워 캔버스에 그린다.
-// 몬스터는 sprites.js의 도트를 그리거나, 종에 img가 있으면 그 이미지를 그린다.
+// 디지몬은 스프라이트 시트(ATLAS)에서 잘라 그리고, 시트를 못 읽으면 16×16 도트 폴백을 그린다.
 
 import { LCD_W, LCD_H } from './config.js';
-import { getSprite, MONSTER_SPRITES, parseSprite, spriteFrame } from './sprites.js';
-import { SPECIES } from './species.js';
+import { getSprite, parseSprite, spriteFrame } from './sprites.js';
+import { ATLAS, spriteInfo } from './species.js';
 
 export const PALETTE = {
   light: { bg: '#a7b48f', ghost: '#9aa883', on: '#1e2a1b' },
@@ -30,76 +30,15 @@ const PLACEHOLDER = parseSprite([
   '................',
 ]);
 
-const imageCache = new Map();
-// Alpha-channel union of BOTH original GIF poses, measured with Pillow.
-// [left, top, right, bottom]; originals remain byte-for-byte untouched.
-// One shared crop prevents pose-by-pose rescaling and keeps feet on the ground.
-const ORIGINAL_BOUNDS = {
-  egg: [6, 3, 30, 32],
-  ttol: [21, 49, 51, 68],
-  ttolttol: [21, 45, 50, 68],
-  piko: [18, 33, 53, 68],
-  monggle: [18, 28, 52, 68],
-  volt: [5, 26, 67, 68],
-  kara: [5, 20, 67, 66],
-  mungchi: [8, 25, 64, 68],
-  jellion: [4, 15, 67, 68],
-  mush: [8, 20, 64, 68],
-  noise: [8, 20, 64, 68],
-  raiga: [7, 20, 64, 68],
-  grove: [4, 20, 67, 68],
-  buglord: [9, 14, 64, 68],
-};
-
-function dimensions(img) {
-  const w = img.naturalWidth || img.width;
-  const h = img.naturalHeight || img.height;
-  return Number.isFinite(w) && w > 0 && Number.isFinite(h) && h > 0 ? { w, h } : null;
-}
-
-function imageBounds(src, img) {
-  const size = dimensions(img);
-  if (!size) return null; // Mocked Image / undecoded image: retain the old draw path.
-  for (const [id, box] of Object.entries(ORIGINAL_BOUNDS)) {
-    const expectedSize = id === 'egg' ? 36 : 72;
-    if (SPECIES[id].img.includes(src) && size.w === expectedSize && size.h === expectedSize) {
-      return box.map(value => value / expectedSize);
-    }
-  }
-  // Replacement assets can be scanned once on load. Never mutate img.crossOrigin:
-  // existing/read-only Images and tainted canvases must still render normally.
-  try {
-    const canvas = typeof OffscreenCanvas !== 'undefined' ? new OffscreenCanvas(size.w, size.h)
-      : globalThis.document?.createElement?.('canvas');
-    if (!canvas) return null;
-    canvas.width = size.w;
-    canvas.height = size.h;
-    const ctx = canvas.getContext('2d', { willReadFrequently: true });
-    if (!ctx?.getImageData) return null;
-    ctx.drawImage(img, 0, 0);
-    const { data } = ctx.getImageData(0, 0, size.w, size.h);
-    let left = size.w, top = size.h, right = 0, bottom = 0;
-    for (let y = 0; y < size.h; y++) for (let x = 0; x < size.w; x++) {
-      if (data[(y * size.w + x) * 4 + 3] === 0) continue;
-      left = Math.min(left, x);
-      top = Math.min(top, y);
-      right = Math.max(right, x + 1);
-      bottom = Math.max(bottom, y + 1);
-    }
-    return right > left && bottom > top ? [left / size.w, top / size.h, right / size.w, bottom / size.h] : null;
-  } catch {
-    return null; // SecurityError, failed decoding, or unavailable canvas.
-  }
-}
-
-function loadImage(src) {
-  if (imageCache.has(src)) return imageCache.get(src);
-  const entry = { img: new Image(), ready: false, failed: false, bounds: null };
-  imageCache.set(src, entry);
+// 모든 디지몬과 알이 한 장의 스프라이트 시트에 들어 있다 (셀 하나 = ATLAS.cell 픽셀).
+let atlas = null;
+function loadAtlas() {
+  if (atlas) return atlas;
+  const entry = { img: new Image(), ready: false, failed: false };
+  atlas = entry;
   entry.done = new Promise(resolve => {
     entry.img.onload = () => {
       if (entry.ready || entry.failed) return;
-      entry.bounds = imageBounds(src, entry.img);
       entry.ready = true;
       resolve(entry);
     };
@@ -110,35 +49,39 @@ function loadImage(src) {
     };
   });
   // 모듈 위치를 기준으로 찾으므로 하위 경로 배포도 지원한다.
-  entry.img.src = new URL(src, new URL('../', import.meta.url)).href;
+  entry.img.src = new URL(ATLAS.src, new URL('../', import.meta.url)).href;
   return entry;
 }
 
-function sharedCrop(entries, selected) {
-  const size = dimensions(selected.img);
-  if (!size) return null;
-  const boxes = entries.filter(entry => entry.ready).map(entry => entry.bounds || [0, 0, 1, 1]);
-  if (!boxes.length) return null;
-  const left = Math.min(...boxes.map(box => box[0]));
-  const top = Math.min(...boxes.map(box => box[1]));
-  const right = Math.max(...boxes.map(box => box[2]));
-  const bottom = Math.max(...boxes.map(box => box[3]));
-  return { x: left * size.w, y: top * size.h, w: (right - left) * size.w, h: (bottom - top) * size.h };
+function fallbackBits(id) {
+  return spriteInfo(id) ? getSprite(id) : PLACEHOLDER;
 }
 
 /**
- * 종의 그림을 고른다. frame(0/1)은 이미지가 2장일 때 번갈아 쓴다.
- * 돌려주는 값: { bits } (도트) 또는 { img, crop } (이미지 + 공통 콘텐츠 경계)
+ * 그림을 고른다. id는 종 ID 또는 알 그림 ID(egg:<무늬>). frame(0/1)은 두 포즈를 번갈아 쓴다.
+ * 돌려주는 값: { bits } (도트) 또는 { img, crop } (시트 + 두 포즈 공통 영역)
+ * 두 포즈가 같은 영역을 쓰므로 포즈가 바뀌어도 크기가 변하지 않고 발이 바닥에 붙는다.
  */
-export function monsterVisual(speciesId, frame = 0) {
-  const sp = SPECIES[speciesId];
-  const bits = MONSTER_SPRITES[speciesId] ? getSprite(speciesId, frame) : PLACEHOLDER;
-  if (sp && Array.isArray(sp.img) && sp.img.length && typeof Image !== 'undefined') {
-    const entries = sp.img.map(loadImage);
-    const e = entries[spriteFrame(frame, entries.length)];
-    if (e.ready) return { img: e.img, crop: sharedCrop(entries, e) };
-    // 로딩 중/실패 시에도 디지몬 폴백을 그려 화면이 비지 않게 한다.
-    if (!e.failed) return { bits, loading: true, done: e.done };
+export function monsterVisual(id, frame = 0) {
+  const info = spriteInfo(id);
+  const bits = fallbackBits(id);
+  if (info && typeof Image !== 'undefined') {
+    const entry = loadAtlas();
+    if (entry.ready) {
+      const cell = info.cells[spriteFrame(frame, info.cells.length)];
+      const [left, top, right, bottom] = info.box;
+      return {
+        img: entry.img,
+        crop: {
+          x: (cell % ATLAS.cols) * ATLAS.cell + left,
+          y: Math.floor(cell / ATLAS.cols) * ATLAS.cell + top,
+          w: right - left,
+          h: bottom - top,
+        },
+      };
+    }
+    // 로딩 중/실패 시에도 폴백을 그려 화면이 비지 않게 한다.
+    if (!entry.failed) return { bits, loading: true, done: entry.done };
   }
   return { bits };
 }
@@ -208,7 +151,7 @@ export class LCD {
   monster(speciesId, x, y, { flip = false, frame = 0, invert = false, silhouette = false, alpha = 1, reveal = 1 } = {}) {
     const v = monsterVisual(speciesId, frame);
     // Legacy inversion remains available to callers, but evolution never uses it.
-    if (invert) return this.bits(v.bits || (MONSTER_SPRITES[speciesId] ? getSprite(speciesId, frame) : PLACEHOLDER), x, y, { flip, invert });
+    if (invert) return this.bits(v.bits || fallbackBits(speciesId), x, y, { flip, invert });
     alpha = Number.isFinite(alpha) ? Math.max(0, Math.min(1, alpha)) : 1;
     reveal = Number.isFinite(reveal) ? Math.max(0, Math.min(1, reveal)) : 1;
     if (alpha === 0 || reveal === 0) return;
@@ -222,7 +165,7 @@ export class LCD {
       ctx.clip();
     }
     if (v.bits || (silhouette && !('filter' in ctx))) {
-      const sprite = v.bits || getSprite(speciesId, frame);
+      const sprite = v.bits || fallbackBits(speciesId);
       for (let row = 0; row < sprite.h; row++) {
         if (row < sprite.h * (1 - reveal)) continue;
         for (let col = 0; col < sprite.w; col++) {
@@ -240,18 +183,12 @@ export class LCD {
     }
     const originX = flip ? 0 : x * scale;
     const originY = flip ? 0 : y * scale;
-    if (v.crop) {
-      const { x: sx, y: sy, w, h } = v.crop;
-      const ratio = size / Math.max(w, h);
-      const dw = w * ratio;
-      const dh = h * ratio;
-      // Center horizontally, align the shared crop's bottom to the logical slot.
-      ctx.drawImage(v.img, sx, sy, w, h, originX + (size - dw) / 2, originY + size - dh, dw, dh);
-    } else if (flip) {
-      ctx.drawImage(v.img, 0, 0, size, size);
-    } else {
-      ctx.drawImage(v.img, x * scale, y * scale, size, size);
-    }
+    const { x: sx, y: sy, w, h } = v.crop;
+    const ratio = size / Math.max(w, h);
+    const dw = w * ratio;
+    const dh = h * ratio;
+    // Center horizontally, align the shared crop's bottom to the logical slot.
+    ctx.drawImage(v.img, sx, sy, w, h, originX + (size - dw) / 2, originY + size - dh, dw, dh);
     ctx.restore();
   }
 

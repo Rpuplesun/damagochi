@@ -3,7 +3,7 @@
 
 import { LCD_W, LCD_H, POOP_MAX, TRAIN_ROUNDS, TRAIN_PASS } from './config.js';
 import { callReasons } from './game.js';
-import { speciesOf } from './species.js';
+import { speciesOf, visualId } from './species.js';
 import { play, vibrate } from './sound.js';
 
 const PET_Y = LCD_H - 16;
@@ -47,7 +47,7 @@ export class IdleScene {
     const sp = speciesOf(pet.species);
     if (sp.stage === 'egg') {
       const wobble = this.step % 2 ? 1 : 0;
-      lcd.monster(pet.species, 16 + wobble, PET_Y);
+      lcd.monster(visualId(pet), 16 + wobble, PET_Y);
       return;
     }
     if (pet.asleep) {
@@ -55,8 +55,7 @@ export class IdleScene {
       lcd.icon('zz', 36, 1);
     } else {
       const frame = this.step % 2;
-      const bob = frame && sp.img == null ? 1 : 0;
-      lcd.monster(pet.species, this.x, PET_Y - bob, { flip: this.dir > 0, frame });
+      lcd.monster(pet.species, this.x, PET_Y, { flip: this.dir > 0, frame });
     }
     // 똥: 오른쪽 아래부터 쌓는다
     for (let i = 0; i < Math.min(pet.poop, POOP_MAX); i++) {
